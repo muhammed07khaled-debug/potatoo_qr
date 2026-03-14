@@ -3,12 +3,12 @@
 <head> 
     <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Redirecting 1...</title> 
+    <title>Redirecting...</title> 
 </head>
 <body> 
 
     <div class="container" style="text-align: center; padding-top: 50px; font-family: sans-serif;"> 
-        <p>Opening Instagram...</p>
+        <p>Opening App...</p>
         <p style="font-size: 14px; color: #666;">
             If nothing happens, <a href="https://play.google.com/store/apps/details?id=com.supercell.clashroyale">click here to install</a>.
         </p>
@@ -16,15 +16,27 @@
 
     <script>
         window.onload = function() {
-            // 1. Attempt to open the app link
-            window.location.href = "potatoo://menu/699fde85c4b265cbfdd14669";
+            // 1. Get the 'id' parameter from the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const menuId = urlParams.get('id');
 
-            // 2. Set a timer (2 seconds)
-            // If the app doesn't open and the browser stays on this page, 
-            // it will redirect to the Play Store.
+            // 2. Fallback if no ID is provided in the URL
+            if (!menuId) {
+                console.error("No ID found in URL. Use ?id=YOUR_ID");
+                return;
+            }
+
+            // 3. Construct the deep link with the dynamic ID
+            const appLink = "potatoo://menu/" + menuId;
+            const storeLink = "https://play.google.com/store/apps/details?id=com.supercell.clashroyale";
+
+            // 4. Attempt to open the app
+            window.location.href = appLink;
+
+            // 5. Fallback timer to Play Store
             setTimeout(function() {
-                window.location.href = "https://play.google.com/store/apps/details?id=com.supercell.clashroyale";
-            }, 2000);
+                window.location.href = storeLink;
+            }, 2500);
         };
     </script>
 
