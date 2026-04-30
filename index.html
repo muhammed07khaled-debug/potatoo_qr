@@ -1,44 +1,655 @@
 <!DOCTYPE html>
-<html lang="en">
-<head> 
-    <meta charset="UTF-8"> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Redirecting...</title> 
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Potatoo Menu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gold-1: #FFCC44;
+      --gold-2: #E08A00;
+      --bg-dark: #111111;
+      --bg-card: #1A1A1A;
+      --bg-item: #2B2B2B;
+      --border: #3A3A3A;
+      --text-main: #FFFFFF;
+      --text-sub: rgba(255,255,255,0.65);
+      --gold-grad: linear-gradient(180deg, #FFCC44 0%, #E08A00 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Cairo', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ===== LOADER ===== */
+    #loader {
+      position: fixed; inset: 0;
+      background: var(--bg-dark);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999;
+      transition: opacity 0.4s ease;
+    }
+    #loader.hide { opacity: 0; pointer-events: none; }
+    .loader-logo {
+      width: 80px; height: 80px; border-radius: 20px;
+      background: var(--gold-grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; margin-bottom: 20px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+    .loader-text { font-size: 15px; color: var(--text-sub); font-weight: 700; margin-bottom: 16px; }
+    .loader-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border); border-top-color: var(--gold-1);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== ERROR ===== */
+    #error-state {
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 32px; text-align: center;
+    }
+    #error-state .err-icon { font-size: 56px; margin-bottom: 16px; }
+    #error-state h2 { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
+    #error-state p { color: var(--text-sub); font-size: 14px; }
+
+    /* ===== MAIN ===== */
+    #main { display: none; }
+
+    /* ===== HEADER ===== */
+    #header { position: relative; padding-bottom: 24px; overflow: hidden; }
+    .header-cover { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .header-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, #111111 100%);
+    }
+    .header-content {
+      position: relative; z-index: 2; margin-top: -70px;
+      padding: 0 20px; display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+    }
+    .branch-logo {
+      width: 88px; height: 88px; border-radius: 22px;
+      object-fit: cover; border: 3px solid var(--gold-1); margin-bottom: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .branch-logo-placeholder {
+      width: 88px; height: 88px; border-radius: 22px;
+      background: var(--gold-grad); margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; border: 3px solid var(--gold-1);
+    }
+    .branch-name-main {
+      font-size: 28px; font-weight: 900; line-height: 1.2;
+      background: var(--gold-grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .branch-name-sub { font-size: 14px; font-weight: 700; color: var(--text-sub); margin-top: 4px; }
+
+    /* ===== APP BANNER ===== */
+    #app-banner {
+      margin: 0 14px 16px; padding: 12px 14px;
+      background: var(--bg-card); border: 1px solid var(--gold-2);
+      border-radius: 16px; display: none;
+      align-items: center; gap: 10px; cursor: pointer;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }
+    #app-banner .b-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: var(--gold-grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    #app-banner .b-text { flex: 1; }
+    #app-banner .b-text strong { display: block; font-size: 13px; font-weight: 900; }
+    #app-banner .b-text span { font-size: 11px; color: var(--text-sub); }
+    #app-banner .b-arrow { color: var(--gold-1); font-size: 16px; }
+
+    /* ===== LANG ===== */
+    .lang-toggle {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin: 0 0 14px;
+    }
+    .lang-btn {
+      padding: 5px 18px; border-radius: 20px; border: none;
+      font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 12px;
+      cursor: pointer; transition: all 0.2s;
+      background: var(--bg-item); color: var(--text-sub);
+    }
+    .lang-btn.active { background: var(--gold-grad); color: #000; }
+
+    /* ===== TABS ===== */
+    #tabs-wrapper {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg-card); padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #tabs {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding: 0 12px; scrollbar-width: none;
+    }
+    #tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0; padding: 6px 16px; border-radius: 20px; border: none;
+      font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 900;
+      cursor: pointer; transition: all 0.2s;
+      background: var(--bg-item); color: var(--text-main); white-space: nowrap;
+    }
+    .tab-btn.active { background: var(--gold-grad); color: #000; }
+
+    /* ===== CONTENT ===== */
+    #content { padding: 12px 14px 140px; }
+    .section-title { font-size: 22px; font-weight: 900; padding: 14px 0 10px; }
+
+    /* ===== ITEM CARD ===== */
+    .item-card {
+      background: var(--bg-item); border: 1px solid var(--border);
+      border-radius: 16px; padding: 12px; margin-bottom: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+    .item-inner { display: flex; gap: 10px; align-items: flex-start; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 16px; font-weight: 900; margin-bottom: 4px; }
+    .item-desc { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+    .item-img { width: 86px; height: 86px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+    .price-box {
+      display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      background: #000; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 5px 10px; margin-top: 8px;
+    }
+    .currency {
+      font-size: 12px; font-weight: 900;
+      background: var(--gold-grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .price-item { display: flex; align-items: center; gap: 3px; }
+    .size-label { font-size: 11px; font-weight: 700; }
+    .price-val {
+      font-size: 13px; font-weight: 900;
+      background: var(--gold-grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .price-sep { color: var(--border); font-size: 11px; margin: 0 2px; }
+
+    /* ===== BOTTOM BAR ===== */
+    #bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-card); padding: 8px 14px 20px;
+      z-index: 20; border-top: 1px solid var(--border);
+    }
+    .bottom-inner {
+      background: #222; border-radius: 16px; padding: 8px;
+      display: flex; gap: 10px; align-items: center;
+    }
+    .action-btn-main {
+      flex: 1; height: 48px; border-radius: 14px; border: none;
+      background: var(--gold-grad); color: #000;
+      font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 900;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; text-decoration: none;
+    }
+    .action-btn-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      border: 2px solid var(--gold-1); background: var(--bg-dark);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; cursor: pointer; text-decoration: none; flex-shrink: 0;
+    }
+    .btn-hidden { display: none !important; }
+  </style>
 </head>
-<body> 
+<body>
 
-    <div class="container" style="text-align: center; padding-top: 50px; font-family: sans-serif;"> 
-        <p>Opening App...</p>
-        <p style="font-size: 14px; color: #666;">
-            If nothing happens, <a href="https://play.google.com/store/apps/details?id=com.supercell.clashroyale">click here to install</a>.
-        </p>
-    </div> 
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">🥔</div>
+  <div class="loader-text" id="loader-text">جاري فتح التطبيق...</div>
+  <div class="loader-spinner"></div>
+</div>
 
-    <script>
-        window.onload = function() {
-            // 1. Get the 'id' parameter from the URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const menuId = urlParams.get('id');
+<!-- ERROR -->
+<div id="error-state">
+  <div class="err-icon">😕</div>
+  <h2 id="err-title">المنيو غير موجود</h2>
+  <p id="err-msg">تعذر تحميل بيانات المطعم.</p>
+</div>
 
-            // 2. Fallback if no ID is provided in the URL
-            if (!menuId) {
-                console.error("No ID found in URL. Use ?id=YOUR_ID");
-                return;
-            }
+<!-- MAIN -->
+<div id="main">
+  <div id="header">
+    <img class="header-cover" src="" id="header-cover" onerror="this.style.display='none'" alt="" />
+    <div class="header-overlay"></div>
+    <div class="header-content">
+      <div id="branch-logo-wrap"></div>
+      <div class="branch-name-main" id="branch-name-main"></div>
+      <div class="branch-name-sub" id="branch-name-sub"></div>
+    </div>
+  </div>
 
-            // 3. Construct the deep link with the dynamic ID
-            const appLink = "potatoo://menu/" + menuId;
-            const storeLink = "https://drive.google.com/file/d/1Kym0y0-8-Etx2lMWKumTdXGuqxmx84Io/view?usp=drive_link";
+  <div id="app-banner" onclick="openApp()">
+    <div class="b-icon">🥔</div>
+    <div class="b-text">
+      <strong id="banner-title">افتح في التطبيق</strong>
+      <span id="banner-sub">تجربة أفضل مع تطبيق Potatoo</span>
+    </div>
+    <div class="b-arrow">←</div>
+  </div>
 
-            // 4. Attempt to open the app
-            window.location.href = appLink;
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('ar')" id="btn-ar">العربية</button>
+    <button class="lang-btn" onclick="setLang('en')" id="btn-en">English</button>
+  </div>
 
-            // 5. Fallback timer to Play Store
-            setTimeout(function() {
-                window.location.href = storeLink;
-            }, 2500);
-        };
-    </script>
+  <div id="tabs-wrapper"><div id="tabs"></div></div>
+  <div id="content"></div>
 
+  <div id="bottom-bar">
+    <div class="bottom-inner">
+      <a id="btn-call" class="action-btn-main btn-hidden" href="#">
+        <span>📞</span><span id="call-label">اتصل</span>
+      </a>
+      <a id="btn-whatsapp" class="action-btn-icon btn-hidden" href="#" target="_blank">💬</a>
+      <a id="btn-location" class="action-btn-icon btn-hidden" href="#" target="_blank">📍</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SIZE MAP
+// ============================================================
+const FIELD_TO_KEY = {
+  smallPrice:'S', mediumPrice:'M', largePrice:'L', xlPrice:'XL',
+  portionPrice:'1/8', quarterKgPrice:'1/4', thirdKgPrice:'1/3',
+  halfKgPrice:'1/2', oneKgPrice:'1KG',
+  todayPrice:'Talab', shamiPrice:'Shami', frenchPrice:'French',
+  syrianPrice:'Syrian', grilledPrice:'Grilled', baladiPrice:'Baladi',
+  sajPrice:'Saj', finoPrice:'Fino', bunsPrice:'Buns',
+  tortillaPrice:'Tortilla', toastPrice:'Toast', beefPrice:'Beef',
+  chickenPrice:'Chicken', cheesePrice:'Cheese', seafoodPrice:'SeaFood',
+  mixPrice:'Mix', broestPrice:'Broest', mealPrice:'Meal',
+  piecePrice:'Piece', boxPrice:'Box', singleItemPrice:'Single',
+  singlePrice:'Single', doublePrice:'Double', comboPrice:'Combo',
+  regularPrice:'Regular', fardiPrice:'Fardi', familyItemPrice:'Family',
+  familyPrice:'Family', sandwichPrice:'Sandwich', superPrice:'Super',
+  workPrice:'Thigh', breastPrice:'Breast', coldPrice:'Cold',
+  hotPrice:'Hot', friedPrice:'Fried',
+};
+
+const SIZE_LABELS = {
+  S:{ar:'S',en:'S'}, M:{ar:'M',en:'M'}, L:{ar:'L',en:'L'}, XL:{ar:'XL',en:'XL'},
+  '1/8':{ar:'1/8',en:'1/8'}, '1/4':{ar:'1/4',en:'1/4'},
+  '1/3':{ar:'1/3',en:'1/3'}, '1/2':{ar:'1/2',en:'1/2'},
+  '1KG':{ar:'1 كيلو',en:'1 KG'}, Talab:{ar:'طلب',en:'Order'},
+  Shami:{ar:'شامي',en:'Shami'}, French:{ar:'فرنساوي',en:'French'},
+  Syrian:{ar:'سوري',en:'Syrian'}, Grilled:{ar:'مشوي',en:'Grilled'},
+  Baladi:{ar:'بلدي',en:'Baladi'}, Saj:{ar:'صاج',en:'Saj'},
+  Fino:{ar:'فينو',en:'Fino'}, Buns:{ar:'كيزر',en:'Buns'},
+  Tortilla:{ar:'تورتيلا',en:'Tortilla'}, Toast:{ar:'توست',en:'Toast'},
+  Beef:{ar:'لحمه',en:'Beef'}, Chicken:{ar:'فراخ',en:'Chicken'},
+  Cheese:{ar:'جبن',en:'Cheese'}, SeaFood:{ar:'سي فوود',en:'SeaFood'},
+  Mix:{ar:'ميكس',en:'Mix'}, Broest:{ar:'بروست',en:'Broest'},
+  Meal:{ar:'وجبة',en:'Meal'}, Piece:{ar:'قطعة',en:'Piece'},
+  Box:{ar:'بوكس',en:'Box'}, Single:{ar:'سنجل',en:'Single'},
+  Double:{ar:'دبل',en:'Double'}, Combo:{ar:'كومبو',en:'Combo'},
+  Regular:{ar:'عادي',en:'Regular'}, Fardi:{ar:'-',en:'-'},
+  Family:{ar:'عائلي',en:'Family'}, Sandwich:{ar:'ساندوتش',en:'Sandwich'},
+  Super:{ar:'سوبر',en:'Super'}, Thigh:{ar:'ورك',en:'Thigh'},
+  Breast:{ar:'صدر',en:'Breast'}, Cold:{ar:'مثلج',en:'Cold'},
+  Hot:{ar:'ساخن',en:'Hot'}, Fried:{ar:'مقلي',en:'Fried'},
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let branchData = null;
+let currentLang = 'ar';
+let branchId = null;
+
+// ============================================================
+// INIT — نفس منطق صفحتك القديمة + fallback للمنيو
+// ============================================================
+window.onload = function () {
+  const params = new URLSearchParams(window.location.search);
+  branchId = params.get('id');
+
+  if (!branchId) {
+    showError('رابط غير صحيح', 'لا يوجد معرف للمطعم في الرابط.');
+    return;
+  }
+
+  // ✅ الخطوة 1: افتح التطبيق (نفس كودك القديم بالظبط)
+  const appLink = 'potatoo://menu/' + branchId;
+  window.location.href = appLink;
+
+  // ✅ الخطوة 2: بعد 2.5 ثانية لو التطبيق مش موجود — حمّل المنيو بدل الـ store
+  setTimeout(function () {
+    document.getElementById('loader-text').textContent = 'جاري تحميل المنيو...';
+    loadMenu();
+  }, 2500);
+};
+
+// ============================================================
+// FETCH MENU
+// ============================================================
+async function loadMenu() {
+  try {
+    const res = await fetch(
+      'https://potatoo-eight.vercel.app/api/restaurant/menu/' + branchId
+    );
+    const json = await res.json();
+
+    if (!json.success || !json.data || !json.data[0]) {
+      showError('المنيو غير موجود', 'لم يتم العثور على بيانات لهذا المطعم.');
+      return;
+    }
+
+    branchData = json.data[0];
+    renderPage();
+  } catch (e) {
+    showError('خطأ في الاتصال', 'تعذر تحميل المنيو، تحقق من الاتصال.');
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderPage() {
+  hideLoader();
+  document.getElementById('main').style.display = 'block';
+  renderHeader();
+  renderTabs();
+  renderContent();
+  renderBottomBar();
+  document.getElementById('app-banner').style.display = 'flex';
+}
+
+function renderHeader() {
+  const b = branchData;
+  const logoUrl = b.image?.url || '';
+  const logoWrap = document.getElementById('branch-logo-wrap');
+
+  if (logoUrl) {
+    logoWrap.innerHTML = `<img class="branch-logo" src="${logoUrl}" alt="logo" onerror="this.style.display='none'" />`;
+  } else {
+    logoWrap.innerHTML = `<div class="branch-logo-placeholder">🥔</div>`;
+  }
+
+  const fullName = currentLang === 'ar' ? (b.arabicName || '') : (b.englishName || '');
+  const match = fullName.match(/\(([^)]+)\)/);
+  const mainName = fullName.replace(/\s*\([^)]*\)/g, '').trim();
+  const subName = match ? match[1] : '';
+
+  document.getElementById('branch-name-main').textContent = mainName;
+  document.getElementById('branch-name-sub').textContent = subName;
+  document.title = mainName || 'Potatoo Menu';
+}
+
+function renderTabs() {
+  const sections = branchData?.sections || [];
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+
+  sections.forEach((sec, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = currentLang === 'ar' ? (sec.arabicName || '') : (sec.englishName || '');
+    btn.dataset.index = i;
+    btn.onclick = () => scrollToSection(i);
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderContent() {
+  const sections = branchData?.sections || [];
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+
+  sections.forEach((sec, si) => {
+    const block = document.createElement('div');
+    block.id = 'section-' + si;
+
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.textContent = currentLang === 'ar' ? (sec.arabicName || '') : (sec.englishName || '');
+    block.appendChild(title);
+
+    (sec.items || []).forEach(item => block.appendChild(buildItemCard(item)));
+    content.appendChild(block);
+  });
+
+  setupScrollObserver(sections.length);
+}
+
+function buildItemCard(item) {
+  const card = document.createElement('div');
+  card.className = 'item-card';
+
+  const name = currentLang === 'ar' ? (item.arabicName || '') : (item.englishName || '');
+  const desc = currentLang === 'ar' ? (item.arabicDescription || '') : (item.englishDescription || '');
+  const imgUrl = item.image?.url || '';
+  const sizes = extractSizes(item);
+
+  let priceHtml = '';
+  if (sizes.length > 0) {
+    const isSingle = sizes.length === 1;
+    const sizeItems = sizes.map((s, i) => {
+      const label = SIZE_LABELS[s.key]?.[currentLang] ?? s.key;
+      const val = s.value === '0'
+        ? (currentLang === 'ar' ? 'السعر حسب اليوم' : 'Price/Day')
+        : s.value;
+      const sep = i < sizes.length - 1 ? '<span class="price-sep">·</span>' : '';
+      return `<span class="price-item">
+        ${!isSingle ? `<span class="size-label">${label}</span>` : ''}
+        <span class="price-val">${val}</span>
+      </span>${sep}`;
+    }).join('');
+
+    priceHtml = `<div class="price-box">
+      <span class="currency">${currentLang === 'ar' ? 'ج' : 'L.E'}</span>
+      ${sizeItems}
+    </div>`;
+  }
+
+  const imgHtml = imgUrl
+    ? `<img class="item-img" src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.style.display='none'" />`
+    : '';
+
+  card.innerHTML = `
+    <div class="item-inner">
+      <div class="item-info">
+        <div class="item-name">${name}</div>
+        ${desc ? `<div class="item-desc">${desc}</div>` : ''}
+        ${priceHtml}
+      </div>
+      ${imgHtml}
+    </div>`;
+
+  return card;
+}
+
+function extractSizes(item) {
+  const seen = new Set();
+  const result = [];
+  for (const [field, key] of Object.entries(FIELD_TO_KEY)) {
+    if (seen.has(key)) continue;
+    const val = item[field];
+    if (val !== undefined && val !== null && val !== '') {
+      result.push({ key, value: String(val) });
+      seen.add(key);
+    }
+  }
+  return result;
+}
+
+function renderBottomBar() {
+  const b = branchData;
+  const callBtn = document.getElementById('btn-call');
+  const waBtn = document.getElementById('btn-whatsapp');
+  const locBtn = document.getElementById('btn-location');
+
+  if (b.phone) {
+    const numbers = b.phone.split(',').map(n => n.trim()).filter(Boolean);
+    if (numbers.length === 1) {
+      callBtn.href = 'tel:' + numbers[0].replace(/[^0-9+]/g, '');
+    } else {
+      callBtn.href = '#';
+      callBtn.onclick = (e) => { e.preventDefault(); showPhoneSheet(numbers); };
+    }
+    callBtn.classList.remove('btn-hidden');
+  }
+
+  if (b.whatsApp) {
+    waBtn.href = 'https://wa.me/' + b.whatsApp.replace(/[^0-9+]/g, '');
+    waBtn.classList.remove('btn-hidden');
+  }
+
+  if (b.googleMapLink) {
+    locBtn.href = b.googleMapLink;
+    locBtn.classList.remove('btn-hidden');
+  }
+
+  document.getElementById('call-label').textContent =
+    currentLang === 'ar' ? 'اتصل' : 'Call';
+}
+
+// ============================================================
+// PHONE SHEET
+// ============================================================
+function showPhoneSheet(numbers) {
+  const existing = document.getElementById('phone-sheet');
+  if (existing) existing.remove();
+
+  const sheet = document.createElement('div');
+  sheet.id = 'phone-sheet';
+  sheet.style.cssText = `position:fixed;inset:0;z-index:100;
+    display:flex;flex-direction:column;justify-content:flex-end;
+    background:rgba(0,0,0,0.6);`;
+
+  const title = currentLang === 'ar' ? 'اختر رقم للاتصال' : 'Choose a number to call';
+  const box = document.createElement('div');
+  box.style.cssText = `background:#1A1A1A;border-radius:24px 24px 0 0;padding:20px 16px 32px;`;
+  box.innerHTML = `
+    <div style="width:40px;height:4px;background:linear-gradient(90deg,#FFCC44,#E08A00);
+      border-radius:2px;margin:0 auto 16px;"></div>
+    <div style="font-size:17px;font-weight:900;margin-bottom:14px;
+      background:linear-gradient(180deg,#FFCC44,#E08A00);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;">${title}</div>
+    ${numbers.map(n => `
+      <div onclick="window.location.href='tel:${n.replace(/[^0-9+]/g, '')}'"
+        style="display:flex;align-items:center;gap:12px;background:#2B2B2B;
+        border:1px solid #3A3A3A;border-radius:14px;padding:12px 14px;
+        margin-bottom:10px;cursor:pointer;">
+        <div style="width:40px;height:40px;border-radius:10px;
+          background:linear-gradient(180deg,#FFCC44,#E08A00);
+          display:flex;align-items:center;justify-content:center;font-size:18px;">📞</div>
+        <span style="font-weight:700;font-size:15px;">${n}</span>
+      </div>`).join('')}`;
+
+  sheet.appendChild(box);
+  sheet.onclick = (e) => { if (e.target === sheet) sheet.remove(); };
+  document.body.appendChild(sheet);
+}
+
+// ============================================================
+// OPEN APP (from banner)
+// ============================================================
+function openApp() {
+  window.location.href = 'potatoo://menu/' + branchId;
+}
+
+// ============================================================
+// LANG SWITCH
+// ============================================================
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+
+  if (lang === 'ar') {
+    document.getElementById('banner-title').textContent = 'افتح في التطبيق';
+    document.getElementById('banner-sub').textContent = 'تجربة أفضل مع تطبيق Potatoo';
+  } else {
+    document.getElementById('banner-title').textContent = 'Open in App';
+    document.getElementById('banner-sub').textContent = 'Better experience with Potatoo app';
+  }
+
+  if (branchData) {
+    renderHeader();
+    renderTabs();
+    renderContent();
+    renderBottomBar();
+  }
+}
+
+// ============================================================
+// SCROLL
+// ============================================================
+let scrollObserver = null;
+
+function setupScrollObserver(count) {
+  if (scrollObserver) scrollObserver.disconnect();
+  const tabsH = document.getElementById('tabs-wrapper')?.offsetHeight || 60;
+
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = parseInt(entry.target.id.replace('section-', ''));
+        setActiveTab(idx);
+      }
+    });
+  }, { rootMargin: `-${tabsH + 10}px 0px -60% 0px`, threshold: 0 });
+
+  for (let i = 0; i < count; i++) {
+    const el = document.getElementById('section-' + i);
+    if (el) scrollObserver.observe(el);
+  }
+}
+
+function scrollToSection(index) {
+  const el = document.getElementById('section-' + index);
+  if (!el) return;
+  const tabsH = document.getElementById('tabs-wrapper').offsetHeight;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - tabsH - 6, behavior: 'smooth' });
+  setActiveTab(index);
+}
+
+function setActiveTab(index) {
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+  const active = document.querySelector(`.tab-btn[data-index="${index}"]`);
+  if (active) active.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function hideLoader() {
+  const loader = document.getElementById('loader');
+  loader.classList.add('hide');
+  setTimeout(() => loader.style.display = 'none', 400);
+}
+
+function showError(title, msg) {
+  hideLoader();
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent = msg;
+  document.getElementById('error-state').style.display = 'flex';
+}
+</script>
 </body>
 </html>
