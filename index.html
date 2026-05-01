@@ -772,10 +772,9 @@ function renderCartItems() {
     </button>`;
 }
 
-// ============================================================
-// SEND ORDER → WHATSAPP
-// ============================================================
-function sendOrder() {
+
+// SEND ORDER → WHATSAPP + API
+async function sendOrder() {
   const name    = document.getElementById('order-name')?.value.trim();
   const address = document.getElementById('order-address')?.value.trim();
   const phone   = document.getElementById('order-phone')?.value.trim();
@@ -783,10 +782,16 @@ function sendOrder() {
   if (!name)    { alert(currentLang==='ar'?'من فضلك أدخل اسمك':'Please enter your name'); return; }
   if (!address) { alert(currentLang==='ar'?'من فضلك أدخل العنوان':'Please enter the address'); return; }
   if (!phone)   { alert(currentLang==='ar'?'من فضلك أدخل رقم التواصل':'Please enter your phone'); return; }
-
   if (cart.length === 0) { alert(currentLang==='ar'?'العربة فارغة!':'Cart is empty!'); return; }
 
-  // بناء الرسالة
+  // تعطيل الزر أثناء الإرسال
+  const sendBtn = document.querySelector('.send-btn');
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<span>⏳</span><span>${currentLang==='ar'?'جاري الإرسال...':'Sending...'}</span>`;
+  }
+
+  // بناء رسالة الواتساب
   const lines = cart.map(c => {
     const itemName = currentLang === 'ar' ? c.nameAr : c.nameEn;
     const sizeLabel = SIZE_LABELS[c.sizeKey]?.[currentLang] ?? c.sizeKey;
@@ -797,16 +802,41 @@ function sendOrder() {
 
   const total = cart.reduce((s, c) => s + (parseFloat(c.price)||0) * c.qty, 0);
   const totalLine = total > 0 ? `\n\n💰 ${currentLang==='ar'?'الإجمالي':'Total'}: ${total} ${currentLang==='ar'?'ج':'LE'}` : '';
-
   const branchName = currentLang==='ar' ? (branchData.arabicName||'') : (branchData.englishName||'');
 
   const msg = currentLang === 'ar'
     ? `🛒 طلب جديد من ${branchName}\n\n${lines}${totalLine}\n\n👤 الاسم: ${name}\n📍 العنوان: ${address}\n📞 الهاتف: ${phone}`
     : `🛒 New order from ${branchName}\n\n${lines}${totalLine}\n\n👤 Name: ${name}\n📍 Address: ${address}\n📞 Phone: ${phone}`;
 
+  // ① حفظ الطلب في الداتابيز (silent — مش بنوقف لو فشل)
+  try {
+    await fetch('https://potatoo-eight.vercel.app/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        branchId: branchId,
+        customerName: name,
+        customerAddress: address,
+        customerPhone: phone,
+        items: cart.map(c => ({
+          nameAr: c.nameAr || c.nameEn,
+          nameEn: c.nameEn || c.nameAr,
+          sizeKey: c.sizeKey,
+          price: parseFloat(c.price) || 0,
+          qty: c.qty,
+        })),
+      }),
+    });
+  } catch (_) {}
+
+  // ② فتح الواتساب
   const waNumber = branchData.whatsApp.replace(/[^0-9+]/g, '');
-  const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+
+  // ③ تفريغ العربة وإغلاق الشيت
+  cart = [];
+  updateCartBadge();
+  document.getElementById('cart-sheet')?.remove();
 }
 
 // ============================================================
