@@ -766,32 +766,38 @@ function renderCartItems() {
     <input class="form-input" id="order-address" placeholder="${currentLang==='ar'?'عنوان التوصيل':'Delivery address'}" />
     <label class="form-label">${currentLang==='ar'?'رقم التواصل':'Phone'} *</label>
     <input class="form-input" id="order-phone" type="tel" placeholder="${currentLang==='ar'?'رقم هاتفك':'Your phone number'}" />
-    <button class="send-btn" onclick="sendOrder()">
-      <span>📲</span>
-      <span>${currentLang==='ar'?'إرسال الطلب على واتساب':'Send order via WhatsApp'}</span>
-    </button>`;
+    <div style="display:flex;gap:10px;margin-top:4px;">
+  <button class="send-btn" style="flex:1;" onclick="sendWhatsapp()">
+    <span>💬</span>
+    <span>${currentLang==='ar'?'واتساب':'WhatsApp'}</span>
+  </button>
+  <button class="send-btn" style="flex:1;background:linear-gradient(180deg,#30D158,#248A3D);box-shadow:0 4px 20px rgba(48,209,88,0.3);" onclick="sendToRestaurant()">
+    <span>🏪</span>
+    <span>${currentLang==='ar'?'إرسال للمطعم':'Send to Restaurant'}</span>
+  </button>
+</div>`;
 }
 
 
-// SEND ORDER → WHATSAPP + API
-async function sendOrder() {
+// ============================================================
+// SEND ORDER
+// ============================================================
+function getOrderData() {
   const name    = document.getElementById('order-name')?.value.trim();
   const address = document.getElementById('order-address')?.value.trim();
   const phone   = document.getElementById('order-phone')?.value.trim();
+  if (!name)    { alert(currentLang==='ar'?'من فضلك أدخل اسمك':'Please enter your name'); return null; }
+  if (!address) { alert(currentLang==='ar'?'من فضلك أدخل العنوان':'Please enter the address'); return null; }
+  if (!phone)   { alert(currentLang==='ar'?'من فضلك أدخل رقم التواصل':'Please enter your phone'); return null; }
+  if (cart.length === 0) { alert(currentLang==='ar'?'العربة فارغة!':'Cart is empty!'); return null; }
+  return { name, address, phone };
+}
 
-  if (!name)    { alert(currentLang==='ar'?'من فضلك أدخل اسمك':'Please enter your name'); return; }
-  if (!address) { alert(currentLang==='ar'?'من فضلك أدخل العنوان':'Please enter the address'); return; }
-  if (!phone)   { alert(currentLang==='ar'?'من فضلك أدخل رقم التواصل':'Please enter your phone'); return; }
-  if (cart.length === 0) { alert(currentLang==='ar'?'العربة فارغة!':'Cart is empty!'); return; }
+async function sendWhatsapp() {
+  const data = getOrderData();
+  if (!data) return;
+  const { name, address, phone } = data;
 
-  // تعطيل الزر أثناء الإرسال
-  const sendBtn = document.querySelector('.send-btn');
-  if (sendBtn) {
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = `<span>⏳</span><span>${currentLang==='ar'?'جاري الإرسال...':'Sending...'}</span>`;
-  }
-
-  // بناء رسالة الواتساب
   const lines = cart.map(c => {
     const itemName = currentLang === 'ar' ? c.nameAr : c.nameEn;
     const sizeLabel = SIZE_LABELS[c.sizeKey]?.[currentLang] ?? c.sizeKey;
@@ -808,9 +814,24 @@ async function sendOrder() {
     ? `🛒 طلب جديد من ${branchName}\n\n${lines}${totalLine}\n\n👤 الاسم: ${name}\n📍 العنوان: ${address}\n📞 الهاتف: ${phone}`
     : `🛒 New order from ${branchName}\n\n${lines}${totalLine}\n\n👤 Name: ${name}\n📍 Address: ${address}\n📞 Phone: ${phone}`;
 
-  // ① حفظ الطلب في الداتابيز (silent — مش بنوقف لو فشل)
+  const waNumber = branchData.whatsApp.replace(/[^0-9+]/g, '');
+  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+
+  cart = [];
+  updateCartBadge();
+  document.getElementById('cart-sheet')?.remove();
+}
+
+async function sendToRestaurant() {
+  const data = getOrderData();
+  if (!data) return;
+  const { name, address, phone } = data;
+
+  const btns = document.querySelectorAll('.send-btn');
+  btns.forEach(b => { b.disabled = true; });
+
   try {
-    await fetch('https://potatoo-eight.vercel.app/api/orders', {
+    const res = await fetch('https://potatoo-eight.vercel.app/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -827,16 +848,17 @@ async function sendOrder() {
         })),
       }),
     });
-  } catch (_) {}
+    const json = await res.json();
+    if (!json.success) throw new Error();
 
-  // ② فتح الواتساب
-  const waNumber = branchData.whatsApp.replace(/[^0-9+]/g, '');
-  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
-
-  // ③ تفريغ العربة وإغلاق الشيت
-  cart = [];
-  updateCartBadge();
-  document.getElementById('cart-sheet')?.remove();
+    cart = [];
+    updateCartBadge();
+    document.getElementById('cart-sheet')?.remove();
+    showToast(currentLang==='ar'?'✅ تم إرسال طلبك للمطعم!':'✅ Order sent to restaurant!');
+  } catch (_) {
+    btns.forEach(b => { b.disabled = false; });
+    alert(currentLang==='ar'?'فشل الإرسال، حاول مرة أخرى':'Failed to send, try again');
+  }
 }
 
 // ============================================================
@@ -926,6 +948,20 @@ function hideLoader() {
   const loader = document.getElementById('loader');
   loader.classList.add('hide');
   setTimeout(() => loader.style.display = 'none', 400);
+}
+  function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+    background:#1A1A1A; border:1px solid #3A3A3A; border-radius:14px;
+    padding:12px 20px; font-size:14px; font-weight:700; color:#fff;
+    z-index:9999; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    animation:toastIn 0.3s ease;
+  `;
+  document.head.insertAdjacentHTML('beforeend', `<style>@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}</style>`);
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
 }
 function showError(title, msg) {
   hideLoader();
