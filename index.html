@@ -177,7 +177,6 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 10px; gap: 8px;
     }
-    /* لو الأيتم عنده أكتر من سايز → dropdown */
     .size-select {
       flex: 1; background: #000; border: 1px solid var(--border);
       border-radius: 10px; color: var(--text-main);
@@ -335,7 +334,7 @@
       </div>
       <div class="b-arrow">←</div>
     </div>
-    <!-- زر العربة — يظهر بس لو في واتساب -->
+    <!-- زر العربة يظهر دايمًا -->
     <button id="cart-btn" onclick="openCart()" style="display:none;">
       🛒
       <span id="cart-badge">0</span>
@@ -416,7 +415,6 @@ const SIZE_LABELS = {
 let branchData = null;
 let currentLang = 'ar';
 let branchId = null;
-// cart = [{ itemId, name:{ar,en}, sizeKey, sizeLabel:{ar,en}, price, qty }]
 let cart = [];
 
 // ============================================================
@@ -428,10 +426,8 @@ window.onload = function () {
 
   if (!branchId) { showError('رابط غير صحيح', 'لا يوجد معرف للمطعم في الرابط.'); return; }
 
-  // محاولة فتح التطبيق
   window.location.href = 'potatoo://menu/' + branchId;
 
-  // بعد 2.5 ثانية حمّل المنيو
   setTimeout(function () {
     document.getElementById('loader-text').textContent = 'جاري تحميل المنيو...';
     loadMenu();
@@ -467,10 +463,8 @@ function renderPage() {
   renderBottomBar();
   document.getElementById('app-banner').style.display = 'flex';
 
-  // زر العربة يظهر بس لو في واتساب
-  if (branchData.whatsApp) {
-    document.getElementById('cart-btn').style.display = 'flex';
-  }
+  // زر العربة يظهر دايمًا (سواء في واتساب أو لأ)
+  document.getElementById('cart-btn').style.display = 'flex';
 }
 
 function renderHeader() {
@@ -479,7 +473,6 @@ function renderHeader() {
   const logoWrap = document.getElementById('branch-logo-wrap');
   const coverEl = document.getElementById('header-cover');
 
-  // الـ cover = صورة الفرع
   if (logoUrl) {
     coverEl.src = logoUrl;
     coverEl.style.display = 'block';
@@ -538,7 +531,6 @@ function buildItemCard(item) {
   const desc = currentLang === 'ar' ? (item.arabicDescription || '') : (item.englishDescription || '');
   const imgUrl = item.image?.url || '';
   const sizes = extractSizes(item);
-  const hasWa = !!branchData.whatsApp;
 
   // ===== price display =====
   let priceHtml = '';
@@ -563,13 +555,12 @@ function buildItemCard(item) {
     ? `<img class="item-img" src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.style.display='none'" />`
     : '';
 
-  // ===== add to cart row =====
+  // ===== add to cart row — يظهر دايمًا لو في أسعار =====
   let addRowHtml = '';
-  if (hasWa && sizes.length > 0) {
+  if (sizes.length > 0) {
     const itemId = item._id || item.id || name;
 
     if (sizes.length === 1) {
-      // زر مباشر
       const s = sizes[0];
       addRowHtml = `<div class="add-row">
         <button class="add-btn" onclick="addToCart('${itemId}','${escAttr(name)}','${escAttr(item.arabicName||'')}','${escAttr(item.englishName||'')}','${s.key}','${s.value}')">
@@ -577,7 +568,6 @@ function buildItemCard(item) {
         </button>
       </div>`;
     } else {
-      // dropdown للأحجام
       const opts = sizes.map(s => {
         const label = SIZE_LABELS[s.key]?.[currentLang] ?? s.key;
         const val = s.value === '0' ? '?' : s.value;
@@ -739,7 +729,7 @@ function renderCartItems() {
     return;
   }
 
-  container.innerHTML = cart.map((c, i) => {
+  container.innerHTML = cart.map((c) => {
     const name = currentLang === 'ar' ? c.nameAr : c.nameEn;
     const sizeLabel = SIZE_LABELS[c.sizeKey]?.[currentLang] ?? c.sizeKey;
     const priceNum = parseFloat(c.price) || 0;
@@ -758,9 +748,27 @@ function renderCartItems() {
     </div>`;
   }).join('');
 
-  // حساب الإجمالي
   const total = cart.reduce((s, c) => s + (parseFloat(c.price)||0) * c.qty, 0);
   const totalStr = total > 0 ? total + (currentLang==='ar'?' ج':' LE') : '—';
+
+  const hasWa = !!branchData?.whatsApp;
+
+  // ===== الأزرار: لو في واتساب → الاتنين، لو مفيش → مطعم بس =====
+  const btnsHtml = hasWa
+    ? `<div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="send-btn" style="flex:1;" onclick="sendWhatsapp()">
+          <span>💬</span>
+          <span>${currentLang==='ar'?'واتساب':'WhatsApp'}</span>
+        </button>
+        <button class="send-btn" style="flex:1;background:linear-gradient(180deg,#30D158,#248A3D);box-shadow:0 4px 20px rgba(48,209,88,0.3);" onclick="sendToRestaurant()">
+          <span>🏪</span>
+          <span>${currentLang==='ar'?'إرسال للمطعم':'Send to Restaurant'}</span>
+        </button>
+      </div>`
+    : `<button class="send-btn" style="background:linear-gradient(180deg,#30D158,#248A3D);box-shadow:0 4px 20px rgba(48,209,88,0.3);" onclick="sendToRestaurant()">
+        <span>🏪</span>
+        <span>${currentLang==='ar'?'إرسال للمطعم':'Send to Restaurant'}</span>
+      </button>`;
 
   footer.innerHTML = `
     <div class="total-row">
@@ -773,18 +781,8 @@ function renderCartItems() {
     <input class="form-input" id="order-address" placeholder="${currentLang==='ar'?'عنوان التوصيل':'Delivery address'}" />
     <label class="form-label">${currentLang==='ar'?'رقم التواصل':'Phone'} *</label>
     <input class="form-input" id="order-phone" type="tel" placeholder="${currentLang==='ar'?'رقم هاتفك':'Your phone number'}" />
-    <div style="display:flex;gap:10px;margin-top:4px;">
-  <button class="send-btn" style="flex:1;" onclick="sendWhatsapp()">
-    <span>💬</span>
-    <span>${currentLang==='ar'?'واتساب':'WhatsApp'}</span>
-  </button>
-  <button class="send-btn" style="flex:1;background:linear-gradient(180deg,#30D158,#248A3D);box-shadow:0 4px 20px rgba(48,209,88,0.3);" onclick="sendToRestaurant()">
-    <span>🏪</span>
-    <span>${currentLang==='ar'?'إرسال للمطعم':'Send to Restaurant'}</span>
-  </button>
-</div>`;
+    ${btnsHtml}`;
 }
-
 
 // ============================================================
 // SEND ORDER
@@ -956,7 +954,7 @@ function hideLoader() {
   loader.classList.add('hide');
   setTimeout(() => loader.style.display = 'none', 400);
 }
-  function showToast(msg) {
+function showToast(msg) {
   const t = document.createElement('div');
   t.textContent = msg;
   t.style.cssText = `
