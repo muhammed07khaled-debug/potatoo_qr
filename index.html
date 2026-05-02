@@ -689,10 +689,13 @@ function openCart() {
   const existing = document.getElementById('cart-sheet');
   if (existing) existing.remove();
 
+  // منع الـ body من الـ scroll
+  document.body.style.overflow = 'hidden';
+
   const overlay = document.createElement('div');
   overlay.className = 'sheet-overlay';
   overlay.id = 'cart-sheet';
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.onclick = (e) => { if (e.target === overlay) closeCart(); };
 
   const box = document.createElement('div');
   box.className = 'sheet-box';
@@ -701,7 +704,7 @@ function openCart() {
     <div class="sheet-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;">
       <div class="sheet-title" style="padding:0;" id="cart-title">${currentLang==='ar'?'عربة الطلب 🛒':'Order Cart 🛒'}</div>
-      <button onclick="document.getElementById('cart-sheet')?.remove()" style="
+      <button onclick="closeCart()" style="
         width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
         background:var(--bg-item);color:var(--text-sub);font-size:18px;
         cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;
@@ -824,7 +827,7 @@ async function sendWhatsapp() {
 
   cart = [];
   updateCartBadge();
-  document.getElementById('cart-sheet')?.remove();
+  closeCart();
 }
 
 async function sendToRestaurant() {
@@ -858,7 +861,7 @@ async function sendToRestaurant() {
 
     cart = [];
     updateCartBadge();
-    document.getElementById('cart-sheet')?.remove();
+    closeCart();
     showToast(currentLang==='ar'?'✅ تم إرسال طلبك للمطعم!':'✅ Order sent to restaurant!');
   } catch (_) {
     btns.forEach(b => { b.disabled = false; });
@@ -890,6 +893,14 @@ function showPhoneSheet(numbers) {
   sheet.appendChild(box);
   sheet.onclick = (e) => { if (e.target === sheet) sheet.remove(); };
   document.body.appendChild(sheet);
+}
+
+// ============================================================
+// CLOSE CART
+// ============================================================
+function closeCart() {
+  document.getElementById('cart-sheet')?.remove();
+  document.body.style.overflow = '';
 }
 
 // ============================================================
