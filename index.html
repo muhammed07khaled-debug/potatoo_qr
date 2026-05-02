@@ -709,7 +709,14 @@ function openCart() {
   box.id = 'cart-box';
   box.innerHTML = `
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="cart-title">${currentLang==='ar'?'عربة الطلب 🛒':'Order Cart 🛒'}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;">
+      <div class="sheet-title" style="padding:0;" id="cart-title">${currentLang==='ar'?'عربة الطلب 🛒':'Order Cart 🛒'}</div>
+      <button onclick="document.getElementById('cart-sheet')?.remove()" style="
+        width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+        background:var(--bg-item);color:var(--text-sub);font-size:18px;
+        cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;
+      ">✕</button>
+    </div>
     <div class="sheet-scroll" id="cart-items"></div>
     <div class="sheet-footer" id="cart-footer"></div>`;
 
